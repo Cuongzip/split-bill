@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { TooltipProvider } from "@/components/ui/tooltip";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -13,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Split Bill",
-  description: "Split Bill application",
+  title: "BillSplit — Chia tiền hoá đơn thông minh",
+  description: "Chia tiền hoá đơn nhóm minh bạch, tính toán chuẩn xác theo từng món ăn",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -54,8 +56,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body suppressHydrationWarning className="min-h-full flex flex-col">
-        {children}
+      <body suppressHydrationWarning className="min-h-full flex flex-col font-sans">
+        <TooltipProvider>
+          {children}
+        </TooltipProvider>
       </body>
     </html>
   );
