@@ -1,5 +1,6 @@
 import connectToDatabase from "@/lib/mongodb";
 import Bill from "@/models/Bill";
+import GeminiTest from "./gemini-test";
 
 export default async function Home() {
   await connectToDatabase();
@@ -15,11 +16,13 @@ export default async function Home() {
         <ul>
           {bills.map((bill: any) => (
             <li key={bill._id.toString()} style={{ marginBottom: "8px" }}>
-              {bill.name }
+              {bill.name}
             </li>
           ))}
         </ul>
       )}
+
+      <GeminiTest />
     </main>
   );
 }
