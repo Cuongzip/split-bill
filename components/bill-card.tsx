@@ -55,6 +55,17 @@ export function BillCard({
   const [newProductPrice, setNewProductPrice] = React.useState("");
 
   const billCalc = calculateBill(bill, participants);
+  const [isEditingTotal, setIsEditingTotal] = React.useState(false);
+  const [tempTotal, setTempTotal] = React.useState(String(billCalc.billTotal));
+
+  const saveTotalEdit = () => {
+    const val = parseInt(tempTotal.replace(/\D/g, ""), 10);
+    onUpdateBill({
+      ...bill,
+      totalAmount: val > 0 ? val : undefined,
+    });
+    setIsEditingTotal(false);
+  };
 
   const handleProductParticipantsChange = (
     productId: string,
@@ -100,7 +111,10 @@ export function BillCard({
     if (e) e.preventDefault();
     if (!newProductName.trim()) return;
 
-    const priceNum = parseInt(newProductPrice.replace(/\D/g, ""), 10) || 0;
+    const isNeg = newProductPrice.trim().startsWith("-");
+    const digits = newProductPrice.replace(/\D/g, "");
+    const rawNum = parseInt(digits, 10) || 0;
+    const priceNum = isNeg ? -rawNum : rawNum;
     const newProduct: BillProduct = {
       id: `p_${Date.now()}`,
       name: newProductName.trim(),
@@ -147,9 +161,37 @@ export function BillCard({
 
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <div className="text-base font-bold text-foreground">
-              {formatVND(billCalc.billTotal)}
-            </div>
+            {isEditingTotal ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  value={tempTotal}
+                  onChange={(e) => setTempTotal(e.target.value)}
+                  className="h-7 text-xs w-28 text-right font-bold"
+                  autoFocus
+                />
+                <Button size="icon-xs" variant="default" onClick={saveTotalEdit} title="Lưu tổng tiền">
+                  <Check className="size-3" />
+                </Button>
+                <Button size="icon-xs" variant="ghost" onClick={() => setIsEditingTotal(false)} title="Hủy">
+                  <X className="size-3" />
+                </Button>
+              </div>
+            ) : (
+              <div
+                className="group flex items-center justify-end gap-1.5 cursor-pointer"
+                onClick={() => {
+                  setTempTotal(String(billCalc.billTotal));
+                  setIsEditingTotal(true);
+                }}
+                title="Bấm để sửa tổng tiền thanh toán"
+              >
+                <div className="text-base font-bold text-foreground hover:text-primary transition-colors">
+                  {formatVND(billCalc.billTotal)}
+                </div>
+                <Edit2 className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            )}
             <div className="text-[11px] text-muted-foreground">
               {bill.products.length} món
             </div>
@@ -278,7 +320,14 @@ export function BillCard({
                         <span className="font-medium text-foreground truncate">
                           {product.name}
                         </span>
-                        <span className="font-semibold text-foreground/90 shrink-0">
+                        <span
+                          className={cn(
+                            "font-semibold shrink-0",
+                            product.price < 0
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-foreground/90"
+                          )}
+                        >
                           {formatVND(product.price)}
                         </span>
 

@@ -66,11 +66,11 @@ export function AppHeader({
             variant="ghost"
             size="icon-sm"
             onClick={onResetSampleData}
-            title="Khôi phục dữ liệu mẫu ban đầu"
+            title="Làm mới / Xoá tất cả dữ liệu"
             className="text-muted-foreground hover:text-foreground hidden md:inline-flex"
           >
             <RotateCcw className="size-3.5" />
-            <span className="sr-only">Reset data</span>
+            <span className="sr-only">Làm mới dữ liệu</span>
           </Button>
 
           <Button

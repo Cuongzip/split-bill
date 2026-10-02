@@ -6,11 +6,6 @@ import {
   Bill,
   StandaloneProduct,
 } from "@/lib/bill-calculator";
-import {
-  INITIAL_PARTICIPANTS,
-  INITIAL_BILLS,
-  INITIAL_STANDALONE,
-} from "@/lib/mock-data";
 import { AppHeader } from "@/components/app-header";
 import { BillCard } from "@/components/bill-card";
 import { StandaloneProducts } from "@/components/standalone-products";
@@ -20,46 +15,269 @@ import { AddStandaloneDialog } from "@/components/add-standalone-dialog";
 import { ParticipantsDialog } from "@/components/participants-dialog";
 import { MobileSummarySheet } from "@/components/mobile-summary-sheet";
 import { Button } from "@/components/ui/button";
-import { Plus, Receipt, } from "lucide-react";
+import { Plus, Receipt, Loader2 } from "lucide-react";
 
 export default function Home() {
-  const [participants, setParticipants] =
-    React.useState<Participant[]>(INITIAL_PARTICIPANTS);
-  const [bills, setBills] = React.useState<Bill[]>(INITIAL_BILLS);
-  const [standaloneProducts, setStandaloneProducts] =
-    React.useState<StandaloneProduct[]>(INITIAL_STANDALONE);
+  const [participants, setParticipants] = React.useState<Participant[]>([]);
+  const [bills, setBills] = React.useState<Bill[]>([]);
+  const [standaloneProducts, setStandaloneProducts] = React.useState<
+    StandaloneProduct[]
+  >([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   const [isAddBillOpen, setIsAddBillOpen] = React.useState(false);
   const [isAddStandaloneOpen, setIsAddStandaloneOpen] = React.useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = React.useState(false);
 
-  const handleAddBill = (newBill: Bill) => {
+  React.useEffect(() => {
+    async function loadData() {
+      try {
+        setIsLoading(true);
+        const [pRes, bRes, sRes] = await Promise.all([
+          fetch("/api/participants"),
+          fetch("/api/bills"),
+          fetch("/api/standalone-products"),
+        ]);
+
+        const [pData, bData, sData] = await Promise.all([
+          pRes.json(),
+          bRes.json(),
+          sRes.json(),
+        ]);
+
+        if (pData.success && pData.data) setParticipants(pData.data);
+        if (bData.success && bData.data) setBills(bData.data);
+        if (sData.success && sData.data) setStandaloneProducts(sData.data);
+      } catch (err) {
+        console.error("Error loading data from API:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
+
+  const handleAddBill = async (newBill: Bill) => {
     setBills((prev) => [newBill, ...prev]);
+    try {
+      await fetch("/api/bills", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newBill),
+      });
+    } catch (err) {
+      console.error("Error creating bill via API:", err);
+    }
   };
 
-  const handleUpdateBill = (updatedBill: Bill) => {
+  const handleUpdateBill = async (updatedBill: Bill) => {
     setBills((prev) =>
       prev.map((b) => (b.id === updatedBill.id ? updatedBill : b))
     );
+    try {
+      await fetch(`/api/bills/${updatedBill.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: updatedBill.title,
+          date: updatedBill.date,
+          image: updatedBill.image,
+          totalAmount: updatedBill.totalAmount,
+          products: updatedBill.products,
+        }),
+      });
+    } catch (err) {
+      console.error("Error updating bill via API:", err);
+    }
   };
 
-  const handleDeleteBill = (billId: string) => {
+  const handleDeleteBill = async (billId: string) => {
     setBills((prev) => prev.filter((b) => b.id !== billId));
+    try {
+      await fetch(`/api/bills/${billId}`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      console.error("Error deleting bill via API:", err);
+    }
   };
 
-  const handleUpdateStandalone = (newProducts: StandaloneProduct[]) => {
+  const handleUpdateStandalone = async (newProducts: StandaloneProduct[]) => {
+    const prevIds = new Set(standaloneProducts.map((p) => p.id));
+    const newIds = new Set(newProducts.map((p) => p.id));
+
+    const deletedIds = standaloneProducts
+      .filter((p) => !newIds.has(p.id))
+      .map((p) => p.id);
+
+    const updatedOrAdded = newProducts.filter((p) => {
+      const prev = standaloneProducts.find((o) => o.id === p.id);
+      return (
+        !prev ||
+        prev.name !== p.name ||
+        prev.price !== p.price ||
+        prev.note !== p.note ||
+        JSON.stringify(prev.participantIds) !== JSON.stringify(p.participantIds)
+      );
+    });
+
     setStandaloneProducts(newProducts);
+
+    for (const delId of deletedIds) {
+      fetch(`/api/standalone-products/${delId}`, { method: "DELETE" }).catch(
+        console.error
+      );
+    }
+
+    for (const item of updatedOrAdded) {
+      if (prevIds.has(item.id)) {
+        fetch(`/api/standalone-products/${item.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(item),
+        }).catch(console.error);
+      } else {
+        fetch("/api/standalone-products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(item),
+        }).catch(console.error);
+      }
+    }
   };
 
-  const handleAddStandalone = (product: StandaloneProduct) => {
+  const handleAddStandalone = async (product: StandaloneProduct) => {
     setStandaloneProducts((prev) => [...prev, product]);
+    try {
+      await fetch("/api/standalone-products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(product),
+      });
+    } catch (err) {
+      console.error("Error adding standalone product via API:", err);
+    }
   };
 
-  const handleResetData = () => {
-    setParticipants(INITIAL_PARTICIPANTS);
-    setBills(INITIAL_BILLS);
-    setStandaloneProducts(INITIAL_STANDALONE);
+  const handleUpdateParticipants = async (newParticipants: Participant[]) => {
+    const prevIds = new Set(participants.map((p) => p.id));
+    const newIds = new Set(newParticipants.map((p) => p.id));
+
+    const added = newParticipants.filter((p) => !prevIds.has(p.id));
+    const removed = participants.filter((p) => !newIds.has(p.id));
+
+    setParticipants(newParticipants);
+
+    const allNewPids = newParticipants.map((p) => p.id);
+
+    if (added.length > 0) {
+      setBills((prev) => {
+        const updated = prev.map((b) => ({
+          ...b,
+          products: b.products.map((prod) => {
+            const hadNoParticipants = prod.participantIds.length === 0;
+            const hadAllPrevious =
+              participants.length > 0 &&
+              participants.every((p) => prod.participantIds.includes(p.id));
+
+            if (hadNoParticipants || hadAllPrevious) {
+              return { ...prod, participantIds: allNewPids };
+            }
+            return prod;
+          }),
+        }));
+
+        for (const b of updated) {
+          fetch(`/api/bills/${b.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ products: b.products }),
+          }).catch(console.error);
+        }
+
+        return updated;
+      });
+
+      setStandaloneProducts((prev) => {
+        const updated = prev.map((s) => {
+          const hadNoParticipants = s.participantIds.length === 0;
+          const hadAllPrevious =
+            participants.length > 0 &&
+            participants.every((p) => s.participantIds.includes(p.id));
+
+          if (hadNoParticipants || hadAllPrevious) {
+            return { ...s, participantIds: allNewPids };
+          }
+          return s;
+        });
+
+        for (const s of updated) {
+          fetch(`/api/standalone-products/${s.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ participantIds: s.participantIds }),
+          }).catch(console.error);
+        }
+
+        return updated;
+      });
+    }
+
+    for (const p of added) {
+      fetch("/api/participants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(p),
+      }).catch(console.error);
+    }
+
+    for (const p of removed) {
+      await fetch(`/api/participants/${p.id}`, { method: "DELETE" }).catch(
+        console.error
+      );
+      setBills((prev) =>
+        prev.map((b) => ({
+          ...b,
+          products: b.products.map((prod) => ({
+            ...prod,
+            participantIds: prod.participantIds.filter((pid) => pid !== p.id),
+          })),
+        }))
+      );
+      setStandaloneProducts((prev) =>
+        prev.map((s) => ({
+          ...s,
+          participantIds: s.participantIds.filter((pid) => pid !== p.id),
+        }))
+      );
+    }
   };
+
+  const handleResetData = async () => {
+    try {
+      const res = await fetch("/api/reset", { method: "POST" });
+      const json = await res.json();
+      if (json.success && json.data) {
+        setParticipants(json.data.participants);
+        setBills(json.data.bills);
+        setStandaloneProducts(json.data.standaloneProducts);
+      }
+    } catch (err) {
+      console.error("Error resetting data via API:", err);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground gap-3">
+        <Loader2 className="size-8 text-primary animate-spin" />
+        <p className="text-sm font-medium text-muted-foreground">
+          Đang đồng bộ dữ liệu BillSplit...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground antialiased pb-20 lg:pb-12">
@@ -87,7 +305,7 @@ export default function Home() {
                 </p>
                 <Button size="sm" onClick={() => setIsAddBillOpen(true)}>
                   <Plus data-icon="inline-start" />
-               Thêm bill đầu tiên
+                  Thêm bill đầu tiên
                 </Button>
               </div>
             ) : (
@@ -147,7 +365,7 @@ export default function Home() {
         isOpen={isParticipantsOpen}
         onOpenChange={setIsParticipantsOpen}
         participants={participants}
-        onUpdateParticipants={setParticipants}
+        onUpdateParticipants={handleUpdateParticipants}
       />
     </div>
   );

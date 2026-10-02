@@ -29,10 +29,36 @@ export function ParticipantAssignment({
   className,
 }: ParticipantAssignmentProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const selectedCount = selectedIds.length;
   const perPersonShare =
     selectedCount > 0 ? Math.round(productPrice / selectedCount) : 0;
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setIsOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      setIsOpen(false);
+    }, 200);
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleToggle = (pId: string) => {
     if (selectedIds.includes(pId)) {
@@ -55,12 +81,26 @@ export function ParticipantAssignment({
   );
 
   return (
-    <div className={cn("relative inline-flex items-center", className)}>
+    <div
+      className={cn("relative inline-flex items-center", className)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onPointerEnter={handleMouseEnter}
+      onPointerLeave={handleMouseLeave}
+    >
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger
+          openOnHover
+          delay={0}
+          closeDelay={250}
           render={
             <button
               type="button"
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              onPointerEnter={handleMouseEnter}
+              onPointerLeave={handleMouseLeave}
+              onClick={() => setIsOpen((prev) => !prev)}
               className={cn(
                 "group flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-all outline-none",
                 "hover:bg-muted/80 focus-visible:ring-2 focus-visible:ring-ring cursor-pointer",
@@ -100,8 +140,18 @@ export function ParticipantAssignment({
           align="end"
           sideOffset={6}
           className="w-64 p-3 shadow-lg border-border"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onPointerEnter={handleMouseEnter}
+          onPointerLeave={handleMouseLeave}
         >
-          <div className="flex flex-col gap-2.5">
+          <div
+            className="flex flex-col gap-2.5"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onPointerEnter={handleMouseEnter}
+            onPointerLeave={handleMouseLeave}
+          >
             <div className="flex items-center justify-between border-b pb-2">
               <div className="flex flex-col">
                 <span className="text-xs font-semibold text-foreground">

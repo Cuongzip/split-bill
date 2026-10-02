@@ -47,11 +47,14 @@ export function AddStandaloneDialog({
     if (!name.trim()) return;
 
     const priceNum = parseInt(price.replace(/\D/g, ""), 10) || 0;
+    const finalPids =
+      selectedPids.length > 0 ? selectedPids : participants.map((p) => p.id);
+
     const newProduct: StandaloneProduct = {
       id: `standalone_${Date.now()}`,
       name: name.trim(),
       price: priceNum,
-      participantIds: selectedPids,
+      participantIds: finalPids,
       note: note.trim() || undefined,
     };
 
