@@ -4,9 +4,10 @@ import {
   createStandaloneProduct,
 } from "@/lib/db-service";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const products = await getStandaloneProducts();
+    const sessionId = req.nextUrl.searchParams.get("sessionId") || undefined;
+    const products = await getStandaloneProducts(sessionId);
     return NextResponse.json({
       success: true,
       data: products,
@@ -26,7 +27,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, price, participantIds, note, id } = body;
+    const { name, price, participantIds, note, id, sessionId } = body;
 
     if (!name?.trim() || price === undefined) {
       return NextResponse.json(
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
 
     const newProduct = await createStandaloneProduct({
       id,
+      sessionId,
       name,
       price: Number(price) || 0,
       participantIds: participantIds || [],

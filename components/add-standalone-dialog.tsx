@@ -21,6 +21,7 @@ interface AddStandaloneDialogProps {
   onOpenChange: (open: boolean) => void;
   participants: Participant[];
   onAddProduct: (product: StandaloneProduct) => void;
+  sessionId: string;
 }
 
 export function AddStandaloneDialog({
@@ -28,6 +29,7 @@ export function AddStandaloneDialog({
   onOpenChange,
   participants,
   onAddProduct,
+  sessionId,
 }: AddStandaloneDialogProps) {
   const [name, setName] = React.useState("");
   const [price, setPrice] = React.useState("");
@@ -52,6 +54,7 @@ export function AddStandaloneDialog({
 
     const newProduct: StandaloneProduct = {
       id: `standalone_${Date.now()}`,
+      sessionId: sessionId || "default",
       name: name.trim(),
       price: priceNum,
       participantIds: finalPids,

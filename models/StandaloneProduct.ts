@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IStandaloneProductDoc extends Document {
   id: string;
+  sessionId: string;
   name: string;
   price: number;
   participantIds: string[];
@@ -16,6 +17,12 @@ const StandaloneProductSchema = new Schema<IStandaloneProductDoc>(
       type: String,
       required: true,
       unique: true,
+      index: true,
+    },
+    sessionId: {
+      type: String,
+      required: true,
+      default: "default",
       index: true,
     },
     name: {

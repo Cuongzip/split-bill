@@ -4,10 +4,12 @@ import { connectToDatabase } from "./mongodb";
 import BillModel from "@/models/Bill";
 import ParticipantModel from "@/models/Participant";
 import StandaloneProductModel from "@/models/StandaloneProduct";
-import { Participant, Bill, BillProduct, StandaloneProduct } from "./bill-calculator";
+import SessionModel from "@/models/Session";
+import { Participant, Bill, BillProduct, StandaloneProduct, Session } from "./bill-calculator";
 
 interface LocalStoreData {
   participants: Participant[];
+  sessions: Session[];
   bills: Bill[];
   standaloneProducts: StandaloneProduct[];
 }
@@ -22,7 +24,13 @@ function readFallbackData(): LocalStoreData {
     }
     if (fs.existsSync(FALLBACK_FILE)) {
       const content = fs.readFileSync(FALLBACK_FILE, "utf-8");
-      return JSON.parse(content);
+      const parsed = JSON.parse(content);
+      return {
+        participants: parsed.participants || [],
+        sessions: parsed.sessions || [],
+        bills: parsed.bills || [],
+        standaloneProducts: parsed.standaloneProducts || [],
+      };
     }
   } catch (err) {
     console.error("Error reading fallback JSON file:", err);
@@ -30,6 +38,7 @@ function readFallbackData(): LocalStoreData {
 
   const emptyData: LocalStoreData = {
     participants: [],
+    sessions: [],
     bills: [],
     standaloneProducts: [],
   };
@@ -170,12 +179,14 @@ export async function deleteParticipant(id: string): Promise<boolean> {
   return true;
 }
 
-export async function getBills(): Promise<Bill[]> {
+export async function getBills(sessionId?: string): Promise<Bill[]> {
   const useMongo = await checkMongoConnection();
   if (useMongo) {
-    const docs = await BillModel.find({}).sort({ createdAt: -1 }).lean();
+    const filter = sessionId ? { sessionId } : {};
+    const docs = await BillModel.find(filter).sort({ createdAt: -1 }).lean();
     return docs.map((d) => ({
       id: d.id,
+      sessionId: d.sessionId || "default",
       title: d.title,
       date: d.date,
       image: d.image,
@@ -190,6 +201,9 @@ export async function getBills(): Promise<Bill[]> {
   }
 
   const data = readFallbackData();
+  if (sessionId) {
+    return data.bills.filter((b) => b.sessionId === sessionId);
+  }
   return data.bills;
 }
 
@@ -200,6 +214,7 @@ export async function getBillById(id: string): Promise<Bill | null> {
     if (!doc) return null;
     return {
       id: doc.id,
+      sessionId: doc.sessionId || "default",
       title: doc.title,
       date: doc.date,
       image: doc.image,
@@ -233,6 +248,7 @@ export async function createBill(billData: Partial<Bill>): Promise<Bill> {
 
   const newBill: Bill = {
     id: billData.id || `bill_${Date.now()}`,
+    sessionId: billData.sessionId || "default",
     title: billData.title?.trim() || "Hoá đơn mới",
     date:
       billData.date ||
@@ -271,6 +287,7 @@ export async function updateBill(
     if (!doc) return null;
     return {
       id: doc.id,
+      sessionId: doc.sessionId || "default",
       title: doc.title,
       date: doc.date,
       image: doc.image,
@@ -330,9 +347,11 @@ export async function addProductToBill(
     if (!doc) return null;
     return {
       id: doc.id,
+      sessionId: doc.sessionId || "default",
       title: doc.title,
       date: doc.date,
       image: doc.image,
+      totalAmount: doc.totalAmount || undefined,
       products: doc.products,
     };
   }
@@ -366,9 +385,11 @@ export async function updateBillProduct(
     await bill.save();
     return {
       id: bill.id,
+      sessionId: bill.sessionId || "default",
       title: bill.title,
       date: bill.date,
       image: bill.image,
+      totalAmount: bill.totalAmount || undefined,
       products: bill.products,
     };
   }
@@ -402,9 +423,11 @@ export async function deleteBillProduct(
     if (!doc) return null;
     return {
       id: doc.id,
+      sessionId: doc.sessionId || "default",
       title: doc.title,
       date: doc.date,
       image: doc.image,
+      totalAmount: doc.totalAmount || undefined,
       products: doc.products,
     };
   }
@@ -417,14 +440,16 @@ export async function deleteBillProduct(
   return bill;
 }
 
-export async function getStandaloneProducts(): Promise<StandaloneProduct[]> {
+export async function getStandaloneProducts(sessionId?: string): Promise<StandaloneProduct[]> {
   const useMongo = await checkMongoConnection();
   if (useMongo) {
-    const docs = await StandaloneProductModel.find({})
+    const filter = sessionId ? { sessionId } : {};
+    const docs = await StandaloneProductModel.find(filter)
       .sort({ createdAt: 1 })
       .lean();
     return docs.map((d) => ({
       id: d.id,
+      sessionId: d.sessionId || "default",
       name: d.name,
       price: d.price,
       participantIds: d.participantIds || [],
@@ -433,6 +458,9 @@ export async function getStandaloneProducts(): Promise<StandaloneProduct[]> {
   }
 
   const data = readFallbackData();
+  if (sessionId) {
+    return data.standaloneProducts.filter((s) => s.sessionId === sessionId);
+  }
   return data.standaloneProducts;
 }
 
@@ -444,6 +472,7 @@ export async function createStandaloneProduct(
 
   const newProduct: StandaloneProduct = {
     id: p.id || `s_${Date.now()}`,
+    sessionId: p.sessionId || "default",
     name: p.name?.trim() || "Chi phí riêng",
     price: p.price || 0,
     participantIds:
@@ -479,6 +508,7 @@ export async function updateStandaloneProduct(
     if (!doc) return null;
     return {
       id: doc.id,
+      sessionId: doc.sessionId || "default",
       name: doc.name,
       price: doc.price,
       participantIds: doc.participantIds || [],
@@ -513,13 +543,107 @@ export async function resetAllData(): Promise<LocalStoreData> {
     await ParticipantModel.deleteMany({});
     await BillModel.deleteMany({});
     await StandaloneProductModel.deleteMany({});
+    await SessionModel.deleteMany({});
   }
 
   const emptyData: LocalStoreData = {
     participants: [],
+    sessions: [],
     bills: [],
     standaloneProducts: [],
   };
   writeFallbackData(emptyData);
   return emptyData;
+}
+
+export async function getSessions(): Promise<Session[]> {
+  const useMongo = await checkMongoConnection();
+  if (useMongo) {
+    const docs = await SessionModel.find({}).sort({ createdAt: 1 }).lean();
+    return docs.map((d) => ({
+      id: d.id,
+      name: d.name,
+      date: d.date,
+      color: d.color,
+    }));
+  }
+
+  const data = readFallbackData();
+  return data.sessions || [];
+}
+
+export async function createSession(s: Partial<Session>): Promise<Session> {
+  const newSession: Session = {
+    id: s.id || `session_${Date.now()}`,
+    name: s.name?.trim() || "Nhóm mới",
+    date:
+      s.date ||
+      new Date().toLocaleDateString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }),
+    color: s.color || "bg-blue-500",
+  };
+
+  const useMongo = await checkMongoConnection();
+  if (useMongo) {
+    await SessionModel.create(newSession);
+    return newSession;
+  }
+
+  const data = readFallbackData();
+  if (!data.sessions) data.sessions = [];
+  data.sessions.push(newSession);
+  writeFallbackData(data);
+  return newSession;
+}
+
+export async function updateSession(
+  id: string,
+  update: Partial<Session>
+): Promise<Session | null> {
+  const useMongo = await checkMongoConnection();
+  if (useMongo) {
+    const doc = await SessionModel.findOneAndUpdate(
+      { id },
+      { $set: update },
+      { new: true }
+    ).lean();
+    if (!doc) return null;
+    return {
+      id: doc.id,
+      name: doc.name,
+      date: doc.date,
+      color: doc.color,
+    };
+  }
+
+  const data = readFallbackData();
+  if (!data.sessions) data.sessions = [];
+  const idx = data.sessions.findIndex((s) => s.id === id);
+  if (idx === -1) return null;
+  data.sessions[idx] = { ...data.sessions[idx], ...update };
+  writeFallbackData(data);
+  return data.sessions[idx];
+}
+
+export async function deleteSession(id: string): Promise<boolean> {
+  const useMongo = await checkMongoConnection();
+  if (useMongo) {
+    await SessionModel.deleteOne({ id });
+    await BillModel.deleteMany({ sessionId: id });
+    await StandaloneProductModel.deleteMany({ sessionId: id });
+    return true;
+  }
+
+  const data = readFallbackData();
+  if (!data.sessions) data.sessions = [];
+  data.sessions = data.sessions.filter((s) => s.id !== id);
+  data.bills = data.bills.filter((b) => b.sessionId !== id);
+  data.standaloneProducts = data.standaloneProducts.filter(
+    (s) => s.sessionId !== id
+  );
+  writeFallbackData(data);
+  return true;
 }

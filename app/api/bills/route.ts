@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBills, createBill } from "@/lib/db-service";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const bills = await getBills();
+    const sessionId = req.nextUrl.searchParams.get("sessionId") || undefined;
+    const bills = await getBills(sessionId);
     return NextResponse.json({
       success: true,
       data: bills,
@@ -21,7 +22,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { title, date, image, products, id, totalAmount } = body;
+    const { title, date, image, products, id, totalAmount, sessionId } = body;
 
     if (!title?.trim()) {
       return NextResponse.json(
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
 
     const newBill = await createBill({
       id,
+      sessionId,
       title,
       date,
       image,

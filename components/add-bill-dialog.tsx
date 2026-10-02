@@ -21,6 +21,7 @@ interface AddBillDialogProps {
   participants: Participant[];
   onAddBill: (newBill: Bill) => void;
   currentBillCount: number;
+  sessionId: string;
 }
 
 function compressImage(file: File, maxWidth = 1600, maxHeight = 1600, quality = 0.85): Promise<string> {
@@ -65,6 +66,7 @@ export function AddBillDialog({
   participants,
   onAddBill,
   currentBillCount,
+  sessionId,
 }: AddBillDialogProps) {
   const [isProcessingOcr, setIsProcessingOcr] = React.useState(false);
   const [ocrStatusText, setOcrStatusText] = React.useState(
@@ -120,6 +122,7 @@ export function AddBillDialog({
         const ocrResult = resData.data;
         const newBill: Bill = {
           id: `bill_${Date.now()}`,
+          sessionId: sessionId || "default",
           title: `BILL #${nextBillNumber} — ${ocrResult.title || fileName}`,
           date: "Vừa xong",
           image: customImage,
@@ -160,6 +163,7 @@ export function AddBillDialog({
     const nextBillNumber = currentBillCount + 1;
     const fallbackBill: Bill = {
       id: `bill_${Date.now()}`,
+      sessionId: sessionId || "default",
       title: `BILL #${nextBillNumber} — ${pendingFileData?.name || "Hoá đơn"}`,
       date: "Vừa xong",
       image: pendingFileData?.image || "",
@@ -178,6 +182,7 @@ export function AddBillDialog({
     const nextBillNumber = currentBillCount + 1;
     const newBill: Bill = {
       id: `bill_${Date.now()}`,
+      sessionId: sessionId || "default",
       title: `BILL #${nextBillNumber} — ${manualTitle.trim()}`,
       date: "Vừa xong",
       image: "",

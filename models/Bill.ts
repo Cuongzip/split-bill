@@ -9,6 +9,7 @@ export interface IBillProduct {
 
 export interface IBill extends Document {
   id: string;
+  sessionId: string;
   title: string;
   date?: string;
   image?: string;
@@ -34,6 +35,12 @@ const BillSchema = new Schema<IBill>(
       type: String,
       required: true,
       unique: true,
+      index: true,
+    },
+    sessionId: {
+      type: String,
+      required: true,
+      default: "default",
       index: true,
     },
     title: {

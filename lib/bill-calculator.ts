@@ -5,6 +5,13 @@ export interface Participant {
   color?: string;
 }
 
+export interface Session {
+  id: string;
+  name: string;
+  date?: string;
+  color?: string;
+}
+
 export interface BillProduct {
   id: string;
   name: string;
@@ -14,6 +21,7 @@ export interface BillProduct {
 
 export interface Bill {
   id: string;
+  sessionId: string;
   title: string;
   date?: string;
   image?: string;
@@ -23,6 +31,7 @@ export interface Bill {
 
 export interface StandaloneProduct {
   id: string;
+  sessionId: string;
   name: string;
   price: number;
   participantIds: string[];

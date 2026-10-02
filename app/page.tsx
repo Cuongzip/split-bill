@@ -5,6 +5,7 @@ import {
   Participant,
   Bill,
   StandaloneProduct,
+  Session,
 } from "@/lib/bill-calculator";
 import { AppHeader } from "@/components/app-header";
 import { BillCard } from "@/components/bill-card";
@@ -14,10 +15,13 @@ import { AddBillDialog } from "@/components/add-bill-dialog";
 import { AddStandaloneDialog } from "@/components/add-standalone-dialog";
 import { ParticipantsDialog } from "@/components/participants-dialog";
 import { MobileSummarySheet } from "@/components/mobile-summary-sheet";
+import { SessionTabs } from "@/components/session-tabs";
 import { Button } from "@/components/ui/button";
 import { Plus, Receipt, Loader2 } from "lucide-react";
 
 export default function Home() {
+  const [sessions, setSessions] = React.useState<Session[]>([]);
+  const [activeSessionId, setActiveSessionId] = React.useState<string>("");
   const [participants, setParticipants] = React.useState<Participant[]>([]);
   const [bills, setBills] = React.useState<Bill[]>([]);
   const [standaloneProducts, setStandaloneProducts] = React.useState<
@@ -28,22 +32,57 @@ export default function Home() {
   const [isAddBillOpen, setIsAddBillOpen] = React.useState(false);
   const [isAddStandaloneOpen, setIsAddStandaloneOpen] = React.useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = React.useState(false);
+  const hasLoaded = React.useRef(false);
 
   React.useEffect(() => {
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
+
     async function loadData() {
       try {
         setIsLoading(true);
-        const [pRes, bRes, sRes] = await Promise.all([
+        const [pRes, bRes, sRes, sessRes] = await Promise.all([
           fetch("/api/participants"),
           fetch("/api/bills"),
           fetch("/api/standalone-products"),
+          fetch("/api/sessions"),
         ]);
 
-        const [pData, bData, sData] = await Promise.all([
+        const [pData, bData, sData, sessData] = await Promise.all([
           pRes.json(),
           bRes.json(),
           sRes.json(),
+          sessRes.json(),
         ]);
+
+        let loadedSessions: Session[] =
+          sessData.success && sessData.data ? sessData.data : [];
+
+        if (loadedSessions.length === 0) {
+          const today = new Date().toLocaleDateString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+          });
+          const defaultSessionName = `Đi ăn ngày ${today}`;
+          try {
+            const createRes = await fetch("/api/sessions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: defaultSessionName }),
+            });
+            const createJson = await createRes.json();
+            if (createJson.success && createJson.data) {
+              loadedSessions = [createJson.data];
+            }
+          } catch (e) {
+            console.error("Error creating default session:", e);
+          }
+        }
+
+        setSessions(loadedSessions);
+        if (loadedSessions.length > 0) {
+          setActiveSessionId(loadedSessions[0].id);
+        }
 
         if (pData.success && pData.data) setParticipants(pData.data);
         if (bData.success && bData.data) setBills(bData.data);
@@ -58,13 +97,78 @@ export default function Home() {
     loadData();
   }, []);
 
+  const handleCreateSession = async (name: string) => {
+    try {
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        setSessions((prev) => [...prev, json.data]);
+        setActiveSessionId(json.data.id);
+      }
+    } catch (err) {
+      console.error("Error creating session:", err);
+    }
+  };
+
+  const handleRenameSession = async (sessionId: string, newName: string) => {
+    setSessions((prev) =>
+      prev.map((s) => (s.id === sessionId ? { ...s, name: newName } : s))
+    );
+    try {
+      await fetch(`/api/sessions/${sessionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName }),
+      });
+    } catch (err) {
+      console.error("Error renaming session:", err);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    const remaining = sessions.filter((s) => s.id !== sessionId);
+    setSessions(remaining);
+    setBills((prev) =>
+      prev.filter((b) => (b.sessionId || "default") !== sessionId)
+    );
+    setStandaloneProducts((prev) =>
+      prev.filter((s) => (s.sessionId || "default") !== sessionId)
+    );
+
+    if (activeSessionId === sessionId) {
+      if (remaining.length > 0) {
+        setActiveSessionId(remaining[0].id);
+      } else {
+        const today = new Date().toLocaleDateString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+        });
+        handleCreateSession(`Đi ăn ngày ${today}`);
+      }
+    }
+
+    try {
+      await fetch(`/api/sessions/${sessionId}`, { method: "DELETE" });
+    } catch (err) {
+      console.error("Error deleting session:", err);
+    }
+  };
+
   const handleAddBill = async (newBill: Bill) => {
-    setBills((prev) => [newBill, ...prev]);
+    const billWithSession = {
+      ...newBill,
+      sessionId: newBill.sessionId || activeSessionId || "default",
+    };
+    setBills((prev) => [billWithSession, ...prev]);
     try {
       await fetch("/api/bills", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newBill),
+        body: JSON.stringify(billWithSession),
       });
     } catch (err) {
       console.error("Error creating bill via API:", err);
@@ -103,16 +207,26 @@ export default function Home() {
     }
   };
 
-  const handleUpdateStandalone = async (newProducts: StandaloneProduct[]) => {
-    const prevIds = new Set(standaloneProducts.map((p) => p.id));
-    const newIds = new Set(newProducts.map((p) => p.id));
+  const handleUpdateStandalone = async (
+    newActiveProducts: StandaloneProduct[]
+  ) => {
+    const otherSessionStandalones = standaloneProducts.filter(
+      (s) => (s.sessionId || "default") !== (activeSessionId || "default")
+    );
+    const updatedAll = [...otherSessionStandalones, ...newActiveProducts];
 
-    const deletedIds = standaloneProducts
-      .filter((p) => !newIds.has(p.id))
+    const currentSessionStandalones = standaloneProducts.filter(
+      (s) => (s.sessionId || "default") === (activeSessionId || "default")
+    );
+    const prevActiveIds = new Set(currentSessionStandalones.map((p) => p.id));
+    const newActiveIds = new Set(newActiveProducts.map((p) => p.id));
+
+    const deletedIds = currentSessionStandalones
+      .filter((p) => !newActiveIds.has(p.id))
       .map((p) => p.id);
 
-    const updatedOrAdded = newProducts.filter((p) => {
-      const prev = standaloneProducts.find((o) => o.id === p.id);
+    const updatedOrAdded = newActiveProducts.filter((p) => {
+      const prev = currentSessionStandalones.find((o) => o.id === p.id);
       return (
         !prev ||
         prev.name !== p.name ||
@@ -122,7 +236,7 @@ export default function Home() {
       );
     });
 
-    setStandaloneProducts(newProducts);
+    setStandaloneProducts(updatedAll);
 
     for (const delId of deletedIds) {
       fetch(`/api/standalone-products/${delId}`, { method: "DELETE" }).catch(
@@ -131,7 +245,7 @@ export default function Home() {
     }
 
     for (const item of updatedOrAdded) {
-      if (prevIds.has(item.id)) {
+      if (prevActiveIds.has(item.id)) {
         fetch(`/api/standalone-products/${item.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -141,19 +255,26 @@ export default function Home() {
         fetch("/api/standalone-products", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(item),
+          body: JSON.stringify({
+            ...item,
+            sessionId: activeSessionId || "default",
+          }),
         }).catch(console.error);
       }
     }
   };
 
   const handleAddStandalone = async (product: StandaloneProduct) => {
-    setStandaloneProducts((prev) => [...prev, product]);
+    const productWithSession = {
+      ...product,
+      sessionId: product.sessionId || activeSessionId || "default",
+    };
+    setStandaloneProducts((prev) => [...prev, productWithSession]);
     try {
       await fetch("/api/standalone-products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(product),
+        body: JSON.stringify(productWithSession),
       });
     } catch (err) {
       console.error("Error adding standalone product via API:", err);
@@ -259,14 +380,37 @@ export default function Home() {
       const res = await fetch("/api/reset", { method: "POST" });
       const json = await res.json();
       if (json.success && json.data) {
-        setParticipants(json.data.participants);
-        setBills(json.data.bills);
-        setStandaloneProducts(json.data.standaloneProducts);
+        setParticipants(json.data.participants || []);
+        setBills(json.data.bills || []);
+        setStandaloneProducts(json.data.standaloneProducts || []);
+        const today = new Date().toLocaleDateString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+        });
+        const defaultSess: Session = {
+          id: `session_${Date.now()}`,
+          name: `Đi ăn ngày ${today}`,
+        };
+        setSessions([defaultSess]);
+        setActiveSessionId(defaultSess.id);
+        fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(defaultSess),
+        }).catch(console.error);
       }
     } catch (err) {
       console.error("Error resetting data via API:", err);
     }
   };
+
+  const activeBills = bills.filter(
+    (b) => (b.sessionId || "default") === (activeSessionId || "default")
+  );
+  const activeStandaloneProducts = standaloneProducts.filter(
+    (s) => (s.sessionId || "default") === (activeSessionId || "default")
+  );
+  const currentSession = sessions.find((s) => s.id === activeSessionId);
 
   if (isLoading) {
     return (
@@ -290,27 +434,41 @@ export default function Home() {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+        {/* Session Tabs */}
+        {sessions.length > 0 && (
+          <SessionTabs
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            bills={bills}
+            standaloneProducts={standaloneProducts}
+            onSelectSession={setActiveSessionId}
+            onCreateSession={handleCreateSession}
+            onRenameSession={handleRenameSession}
+            onDeleteSession={handleDeleteSession}
+          />
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           <div className="lg:col-span-8 xl:col-span-8 flex flex-col gap-6">
-            {bills.length === 0 ? (
+            {activeBills.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-12 text-center rounded-xl border border-dashed border-border bg-card">
                 <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
                   <Receipt className="size-6" />
                 </div>
                 <h3 className="font-semibold text-sm text-foreground">
-                  Chưa có hoá đơn nào
+                  Chưa có hoá đơn nào trong nhóm &quot;{currentSession?.name || "này"}&quot;
                 </h3>
                 <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
-                  Bấm nút bên dưới để tải ảnh hoá đơn hoặc dùng bill mẫu thử nghiệm.
+                  Bấm nút bên dưới để tải ảnh hoá đơn hoặc nhập hoá đơn mới cho nhóm này.
                 </p>
                 <Button size="sm" onClick={() => setIsAddBillOpen(true)}>
                   <Plus data-icon="inline-start" />
-                  Thêm bill đầu tiên
+                  Thêm bill vào nhóm
                 </Button>
               </div>
             ) : (
               <div className="flex flex-col gap-6">
-                {bills.map((bill) => (
+                {activeBills.map((bill) => (
                   <BillCard
                     key={bill.id}
                     bill={bill}
@@ -323,7 +481,7 @@ export default function Home() {
             )}
 
             <StandaloneProducts
-              products={standaloneProducts}
+              products={activeStandaloneProducts}
               participants={participants}
               onUpdateProducts={handleUpdateStandalone}
               onOpenAddModal={() => setIsAddStandaloneOpen(true)}
@@ -332,8 +490,8 @@ export default function Home() {
 
           <div className="hidden lg:block lg:col-span-4 xl:col-span-4 sticky top-20 self-start">
             <GlobalSummary
-              bills={bills}
-              standaloneProducts={standaloneProducts}
+              bills={activeBills}
+              standaloneProducts={activeStandaloneProducts}
               participants={participants}
             />
           </div>
@@ -341,8 +499,8 @@ export default function Home() {
       </main>
 
       <MobileSummarySheet
-        bills={bills}
-        standaloneProducts={standaloneProducts}
+        bills={activeBills}
+        standaloneProducts={activeStandaloneProducts}
         participants={participants}
       />
 
@@ -351,7 +509,8 @@ export default function Home() {
         onOpenChange={setIsAddBillOpen}
         participants={participants}
         onAddBill={handleAddBill}
-        currentBillCount={bills.length}
+        currentBillCount={activeBills.length}
+        sessionId={activeSessionId}
       />
 
       <AddStandaloneDialog
@@ -359,6 +518,7 @@ export default function Home() {
         onOpenChange={setIsAddStandaloneOpen}
         participants={participants}
         onAddProduct={handleAddStandalone}
+        sessionId={activeSessionId}
       />
 
       <ParticipantsDialog
