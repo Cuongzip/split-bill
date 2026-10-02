@@ -1,79 +1,76 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-export interface IParticipant {
-  userId?: mongoose.Types.ObjectId;
+export interface IBillProduct {
+  id: string;
   name: string;
-  amount: number;
-  paid: boolean;
+  price: number;
+  participantIds: string[];
 }
 
 export interface IBill extends Document {
+  id: string;
   title: string;
-  totalAmount: number;
-  payerName: string;
-  payerId?: mongoose.Types.ObjectId;
-  splitType: "EQUAL" | "EXACT" | "PERCENTAGE";
-  participants: IParticipant[];
-  description?: string;
-  date: Date;
+  date?: string;
+  image?: string;
+  totalAmount?: number;
+  products: IBillProduct[];
   createdAt: Date;
   updatedAt: Date;
 }
 
-const ParticipantSchema = new Schema<IParticipant>(
+const BillProductSchema = new Schema<IBillProduct>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User" },
+    id: { type: String, required: true },
     name: { type: String, required: true, trim: true },
-    amount: { type: Number, required: true, default: 0 },
-    paid: { type: Boolean, default: false },
+    price: { type: Number, required: true },
+    participantIds: { type: [String], default: [] },
   },
   { _id: false }
 );
 
 const BillSchema = new Schema<IBill>(
   {
+    id: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
     title: {
       type: String,
       required: [true, "Vui lòng nhập tiêu đề hoá đơn"],
       trim: true,
     },
-    totalAmount: {
-      type: Number,
-      required: [true, "Vui lòng nhập tổng số tiền"],
-      min: [0, "Số tiền không thể âm"],
-    },
-    payerName: {
+    date: {
       type: String,
-      required: [true, "Vui lòng nhập tên người thanh toán"],
-      trim: true,
+      default: () =>
+        new Date().toLocaleTimeString("vi-VN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
     },
-    payerId: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-    },
-    splitType: {
-      type: String,
-      enum: ["EQUAL", "EXACT", "PERCENTAGE"],
-      default: "EQUAL",
-    },
-    participants: {
-      type: [ParticipantSchema],
-      default: [],
-    },
-    description: {
+    image: {
       type: String,
       default: "",
-      trim: true,
     },
-    date: {
-      type: Date,
-      default: Date.now,
+    totalAmount: {
+      type: Number,
+      default: null,
+    },
+    products: {
+      type: [BillProductSchema],
+      default: [],
     },
   },
   {
     timestamps: true,
   }
 );
+
+BillSchema.set("toJSON", {
+  virtuals: true,
+  versionKey: false,
+});
 
 const Bill: Model<IBill> =
   mongoose.models.Bill || mongoose.model<IBill>("Bill", BillSchema);

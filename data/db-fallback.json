@@ -1,0 +1,18 @@
+{
+  "participants": [
+    {
+      "id": "p_1790904680821",
+      "name": "Cường",
+      "avatar": "",
+      "color": "bg-emerald-500 text-white"
+    },
+    {
+      "id": "p_1790904685890",
+      "name": "Cảnh",
+      "avatar": "",
+      "color": "bg-emerald-500 text-white"
+    }
+  ],
+  "bills": [],
+  "standaloneProducts": []
+}

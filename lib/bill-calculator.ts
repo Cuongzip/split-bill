@@ -17,6 +17,7 @@ export interface Bill {
   title: string;
   date?: string;
   image?: string;
+  totalAmount?: number;
   products: BillProduct[];
 }
 
@@ -117,12 +118,14 @@ export function formatVND(amount: number): string {
 
 export function formatCompactK(amount: number): string {
   const rounded = Math.round(amount);
-  if (rounded >= 1000 && rounded % 1000 === 0) {
-    return `${rounded / 1000}k`;
+  const abs = Math.abs(rounded);
+  const sign = rounded < 0 ? "-" : "";
+  if (abs >= 1000 && abs % 1000 === 0) {
+    return `${sign}${abs / 1000}k`;
   }
-  if (rounded >= 1000) {
-    const kVal = (rounded / 1000).toFixed(1).replace(/\.0$/, "");
-    return `${kVal}k`;
+  if (abs >= 1000) {
+    const kVal = (abs / 1000).toFixed(1).replace(/\.0$/, "");
+    return `${sign}${kVal}k`;
   }
   return `${rounded}đ`;
 }
@@ -131,7 +134,11 @@ export function calculateBill(
   bill: Bill,
   participants: Participant[]
 ): BillCalculationResult {
-  const billTotal = bill.products.reduce((acc, p) => acc + (p.price || 0), 0);
+  const sumOfProducts = bill.products.reduce((acc, p) => acc + (p.price || 0), 0);
+  const billTotal =
+    typeof bill.totalAmount === "number" && bill.totalAmount > 0
+      ? bill.totalAmount
+      : sumOfProducts;
   const unassignedItems: BillProduct[] = [];
 
   const partMap: Record<string, BillParticipantCalculation> = {};
@@ -164,6 +171,13 @@ export function calculateBill(
     }
   }
 
+  if (sumOfProducts > 0 && billTotal !== sumOfProducts && unassignedItems.length === 0) {
+    const scale = billTotal / sumOfProducts;
+    for (const p of participants) {
+      partMap[p.id].total = Math.round(partMap[p.id].total * scale);
+    }
+  }
+
   const formulaBreakdown = calculateBillFormulas(bill, participants);
 
   return {
@@ -181,7 +195,11 @@ export function calculateBillFormulas(
   bill: Bill,
   participants: Participant[]
 ): BillFormulaBreakdown {
-  const billTotal = bill.products.reduce((acc, p) => acc + (p.price || 0), 0);
+  const sumOfProducts = bill.products.reduce((acc, p) => acc + (p.price || 0), 0);
+  const billTotal =
+    typeof bill.totalAmount === "number" && bill.totalAmount > 0
+      ? bill.totalAmount
+      : sumOfProducts;
 
   const activeParticipants = participants.filter((p) =>
     bill.products.some((prod) => prod.participantIds.includes(p.id))
@@ -217,30 +235,36 @@ export function calculateBillFormulas(
   const formulas: ParticipantBillFormula[] = [];
 
   for (const p of targetParticipants) {
-    const commonShare = N > 0 ? commonProductsTotal / N : 0;
+    const scale = sumOfProducts > 0 ? billTotal / sumOfProducts : 1;
+    const commonShare =
+      nonCommonProductsTotal === 0 && N > 0
+        ? billTotal / N
+        : N > 0
+        ? Math.max(0, (billTotal - nonCommonProductsTotal * scale) / N)
+        : 0;
 
     const privateItems: ParticipantItemShare[] = [];
     for (const prod of nonCommonProducts) {
       if (prod.participantIds.includes(p.id)) {
-        const share = prod.price / prod.participantIds.length;
+        const share = (prod.price * scale) / prod.participantIds.length;
         privateItems.push({
           productId: prod.id,
           productName: prod.name,
           share,
-          fullPrice: prod.price,
+          fullPrice: prod.price * scale,
           splitCount: prod.participantIds.length,
         });
       }
     }
 
     const privateShare = privateItems.reduce((sum, it) => sum + it.share, 0);
-    const total = commonShare + privateShare;
+    const total = Math.round(commonShare + privateShare);
 
     let formula = "";
     let shortFormula = "";
     if (nonCommonProductsTotal > 0 && commonProductsTotal > 0) {
-      const basePart = `(${formatVND(billTotal)} - ${formatVND(nonCommonProductsTotal)}) / ${N}`;
-      const shortBasePart = `(${formatCompactK(billTotal)} - ${formatCompactK(nonCommonProductsTotal)}) / ${N}`;
+      const basePart = `(${formatVND(billTotal)} - ${formatVND(Math.round(nonCommonProductsTotal * scale))}) / ${N}`;
+      const shortBasePart = `(${formatCompactK(billTotal)} - ${formatCompactK(Math.round(nonCommonProductsTotal * scale))}) / ${N}`;
       if (privateShare > 0) {
         formula = `${basePart} + ${formatVND(privateShare)}`;
         shortFormula = `${shortBasePart} + ${formatCompactK(privateShare)}`;
