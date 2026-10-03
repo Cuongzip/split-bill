@@ -50,8 +50,11 @@ export async function POST(req: NextRequest) {
     const promptText = `
 Bạn là chuyên gia OCR bóc tách hoá đơn tính tiền (bill).
 Hãy phân tích hình ảnh hoá đơn này và trích xuất:
-1. Tiêu đề hoá đơn (tên quán ăn, nhà hàng, siêu thị hoặc "Hoá đơn").
-2. Danh sách các món ăn, thức uống, hàng hoá thực tế (products) kèm giá tiền tương ứng.
+1. TIÊU ĐỀ HOÁ ĐƠN (title):
+   - NẾU hoá đơn có mã định danh, mã hoá đơn, mã đơn hàng, số phiếu, hoặc order ID (ví dụ: "Đơn hàng #OV106968609854570", "Mã đơn: ...", "Số HĐ: ...", "HD123456", "#98765"): hãy ưu tiên lấy mã ID này làm title.
+   - NẾU hoá đơn KHÔNG có mã ID: hãy lấy tên thương hiệu, tên cửa hàng hoặc loại hoá đơn (ví dụ: "Bách Hoá Xanh", "Circle K", "WinMart", "Highlands Coffee", "Phúc Long", "Quán cơm...").
+   - Nếu không có cả hai, đặt title là "Hoá đơn".
+2. DANH SÁCH CÁC MÓN ĂN, THỨC UỐNG, HÀNG HOÁ THỰC TẾ (products) kèm giá tiền tương ứng:
    - BỎ QUA hoàn toàn các mục giảm giá, điểm sử dụng, trừ điểm, voucher, chiết khấu. TUYỆT ĐỐI KHÔNG thêm các dòng trừ tiền hay điểm sử dụng vào danh sách products. Chỉ lấy các món hàng thực tế.
 3. TỔNG TIỀN BILL (totalAmount):
    - Cứ lấy giá tiền khách thực tế phải trả làm tổng tiền (tức số tiền khách chuyển khoản hoặc trả tiền mặt cho người bán).
@@ -61,7 +64,7 @@ Hãy phân tích hình ảnh hoá đơn này và trích xuất:
 QUY TẮC BẮT BUỘC:
 - Trả về DUY NHẤT một chuỗi JSON hợp lệ theo cấu trúc:
 {
-  "title": "Tên quán hoặc tên bill",
+  "title": "Mã ID đơn hàng hoặc Tên loại hoá đơn / thương hiệu",
   "totalAmount": 139000,
   "products": [
     {
@@ -70,9 +73,9 @@ QUY TẮC BẮT BUỘC:
     }
   ]
 }
+- "title": nếu hoá đơn có mã ID thì để mã ID; nếu không có mã ID thì để tên loại hoá đơn / thương hiệu (vd: Bách Hoá Xanh, Circle K).
 - "totalAmount" là số tiền thực tế phải trả (number), không có ký tự chữ.
 - "price" là giá tiền của từng món (number), không có ký tự chữ.
-- Nếu không đọc rõ tên quán, đặt "title" là "Hoá đơn quán ăn".
 - Chỉ trả về JSON, không thêm bất kỳ văn bản giải thích nào khác.
 `;
 
@@ -167,7 +170,7 @@ QUY TẮC BẮT BUỘC:
         return NextResponse.json({
           success: true,
           data: {
-            title: parsedResult.title || "Hoá đơn quán ăn",
+            title: parsedResult.title?.trim() || "Hoá đơn",
             totalAmount: totalPayment,
             products: sanitizedProducts,
           },
