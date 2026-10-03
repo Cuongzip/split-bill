@@ -180,12 +180,9 @@ export function SessionTabs({
                   align="start"
                   className="w-[calc(100vw-2rem)] sm:w-96 p-2 rounded-2xl shadow-xl border-border bg-card"
                 >
-                  <div className="flex items-center justify-between pb-2 px-1 border-b border-border/60">
+                  <div className="pb-2 px-1 border-b border-border/60">
                     <span className="text-xs font-semibold text-muted-foreground">
                       Danh sách nhóm ({sessions.length})
-                    </span>
-                    <span className="text-[10px] text-muted-foreground/80 bg-muted px-1.5 py-0.5 rounded">
-                      Mới nhất ở trên
                     </span>
                   </div>
 
@@ -244,14 +241,7 @@ export function SessionTabs({
                               </div>
 
                               <div className="flex flex-col min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="truncate">{session.name}</span>
-                                  {index === 0 && (
-                                    <span className="text-[9px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1 py-0.2 rounded font-medium shrink-0">
-                                      Mới nhất
-                                    </span>
-                                  )}
-                                </div>
+                                <span className="truncate">{session.name}</span>
                                 <span className="text-[10px] text-muted-foreground font-normal">
                                   {session.date || "Gần đây"} • {sBills.length} bill
                                   {sStandalones.length > 0 && ` + ${sStandalones.length} riêng`}
@@ -467,15 +457,11 @@ export function SessionTabs({
       >
         <DialogContent className="sm:max-w-md p-5 rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-semibold text-destructive">
-              <Trash2 className="size-4" />
-              <span>Xoá nhóm &quot;{deletingSession?.name}&quot;?</span>
+            <DialogTitle className="text-base font-semibold">
+              Xoá nhóm &quot;{deletingSession?.name}&quot;?
             </DialogTitle>
-            <DialogDescription className="text-xs text-foreground/80 pt-1 leading-relaxed">
-              Bạn có chắc muốn xoá nhóm này?{" "}
-              <strong className="text-destructive font-medium">
-                Tất cả các hoá đơn và chi phí riêng thuộc nhóm này sẽ bị xoá vĩnh viễn.
-              </strong>
+            <DialogDescription className="text-xs text-muted-foreground pt-1">
+              Các hoá đơn và chi phí trong nhóm này sẽ bị xoá cùng nhóm.
             </DialogDescription>
           </DialogHeader>
 
@@ -496,7 +482,7 @@ export function SessionTabs({
               onClick={handleConfirmDelete}
               className="rounded-xl"
             >
-              Xoá nhóm
+              Xoá
             </Button>
           </DialogFooter>
         </DialogContent>
