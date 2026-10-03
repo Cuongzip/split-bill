@@ -1,6 +1,12 @@
+import dns from "dns";
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI;
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch {
+  // ignore in environments that do not support setServers
+}
+
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -21,10 +27,17 @@ if (!global.mongooseCache) {
 }
 
 export async function connectToDatabase(): Promise<typeof mongoose> {
-  if (!MONGODB_URI) {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
     throw new Error(
       "Vui lòng cấu hình biến môi trường MONGODB_URI trong file .env.local"
     );
+  }
+
+  try {
+    dns.setServers(["8.8.8.8", "1.1.1.1"]);
+  } catch {
+    // ignore
   }
 
   if (cached.conn && cached.conn.connection.readyState === 1) {
@@ -39,7 +52,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
     };
 
     cached.promise = mongoose
-      .connect(MONGODB_URI, opts)
+      .connect(uri, opts)
       .then((mongooseInstance) => {
         return mongooseInstance;
       })
