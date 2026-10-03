@@ -434,7 +434,6 @@ export default function Home() {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
-        {/* Session Tabs */}
         {sessions.length > 0 && (
           <SessionTabs
             sessions={sessions}
@@ -452,13 +451,6 @@ export default function Home() {
           <div className="lg:col-span-8 xl:col-span-8 flex flex-col gap-6">
             {activeBills.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-12 text-center rounded-xl border border-dashed border-border bg-card">
-                <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
-                  <Receipt className="size-6" />
-                </div>
-                <h3 className="font-semibold text-sm text-foreground mb-4">
-                  Chưa có hoá đơn nào trong nhóm &quot;{currentSession?.name || "này"}&quot;
-                </h3>
-               
                 <Button size="sm" onClick={() => setIsAddBillOpen(true)}>
                   <Plus data-icon="inline-start" />
                   Thêm bill vào nhóm

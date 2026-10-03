@@ -83,11 +83,9 @@ export function StandaloneProducts({
           </div>
           <div>
             <CardTitle className="text-base font-semibold tracking-tight">
-              Sản phẩm riêng
+            Khoản ngoài bill
             </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Chi phí không thuộc bill nào (đá viên, phí ship, phụ thu...)
-            </p>
+         
           </div>
         </div>
 
@@ -124,10 +122,9 @@ export function StandaloneProducts({
 
         {products.length === 0 ? (
           <div className="py-6 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
-            <span>Chưa có sản phẩm riêng nào.</span>
-            <Button variant="outline" size="xs" onClick={onOpenAddModal}>
+            <Button  size="sm" onClick={onOpenAddModal}>
               <Plus data-icon="inline-start" />
-              Thêm sản phẩm riêng đầu tiên
+              Thêm sản phẩm
             </Button>
           </div>
         ) : (

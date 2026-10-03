@@ -228,9 +228,7 @@ export function AddBillDialog({
             <Receipt className="size-4 text-primary" />
             <span>Thêm hoá đơn mới (Bill)</span>
           </DialogTitle>
-          <DialogDescription className="text-xs">
-            Tải ảnh chụp hoá đơn để AI tự động bóc tách hoặc tự đặt tên hoá đơn.
-          </DialogDescription>
+    Công thức
         </DialogHeader>
 
         {isProcessingOcr ? (

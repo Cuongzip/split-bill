@@ -423,9 +423,7 @@ export function BillCard({
                 <Calculator className="size-3.5 text-primary" />
                  Cách tính - {bill.title}
               </span>
-              <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-normal hidden sm:inline-flex">
-                Công thức
-              </Badge>
+        
             </div>
 
             <div className="flex items-center gap-2">

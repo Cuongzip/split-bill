@@ -84,15 +84,13 @@ export function AddStandaloneDialog({
             <ShoppingBag className="size-4 text-primary" />
             <span>Thêm sản phẩm riêng</span>
           </DialogTitle>
-          <DialogDescription className="text-xs">
-            Chi phí riêng không thuộc hoá đơn nào (ví dụ: Đá viên, Phí ship, mua thêm đồ ngoài...).
-          </DialogDescription>
+         
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="product-name" className="text-xs font-semibold">
-              Tên sản phẩm / chi phí
+              Tên sản phẩm 
             </Label>
             <Input
               id="product-name"

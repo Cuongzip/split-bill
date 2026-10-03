@@ -16,7 +16,6 @@ import {
 import {
   Plus,
   FolderOpen,
-  Calendar,
   Edit2,
   Trash2,
   Layers,
@@ -63,7 +62,6 @@ export function SessionTabs({
 
   const [deletingSession, setDeletingSession] = React.useState<Session | null>(null);
 
-  // Sắp xếp session: Mới nhất luôn ở trên đầu (dựa vào timestamp trong ID hoặc ngày)
   const sortedSessions = React.useMemo(() => {
     return [...sessions].sort((a, b) => {
       const timeA = parseInt(a.id.replace(/\D/g, "") || "0", 10);
@@ -73,19 +71,16 @@ export function SessionTabs({
     });
   }, [sessions]);
 
-  // Lọc theo từ khóa tìm kiếm
   const filteredSessions = React.useMemo(() => {
     if (!searchTerm.trim()) return sortedSessions;
     const term = searchTerm.toLowerCase();
     return sortedSessions.filter((s) => s.name.toLowerCase().includes(term));
   }, [sortedSessions, searchTerm]);
 
-  // Session đang được chọn
   const activeSession = React.useMemo(() => {
     return sessions.find((s) => s.id === activeSessionId) || sortedSessions[0];
   }, [sessions, activeSessionId, sortedSessions]);
 
-  // Thống kê bill của session hiện tại
   const activeSessionBills = React.useMemo(() => {
     if (!activeSession) return [];
     return bills.filter((b) => (b.sessionId || "default") === activeSession.id);
@@ -142,18 +137,12 @@ export function SessionTabs({
     <div className="w-full mb-6">
       <div className="bg-card border border-border/80 rounded-2xl p-3 sm:p-4 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          
-          {/* Bên trái: Dropdown chọn Session */}
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
               <Layers className="size-4" />
             </div>
 
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Bữa ăn / Nhóm hiện tại
-              </span>
-
               <Popover open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
                 <PopoverTrigger
                   type="button"
@@ -198,14 +187,13 @@ export function SessionTabs({
                     </div>
                   )}
 
-                  {/* Danh sách các session (mới nhất ở trên) */}
                   <div className="max-h-72 overflow-y-auto py-1 flex flex-col gap-1 pr-0.5">
                     {filteredSessions.length === 0 ? (
                       <div className="py-6 text-center text-xs text-muted-foreground">
                         Không tìm thấy nhóm phù hợp.
                       </div>
                     ) : (
-                      filteredSessions.map((session, index) => {
+                      filteredSessions.map((session) => {
                         const isCurrent = session.id === activeSessionId;
                         const sBills = bills.filter(
                           (b) => (b.sessionId || "default") === session.id
@@ -249,7 +237,6 @@ export function SessionTabs({
                               </div>
                             </div>
 
-                            {/* Nút tác vụ sửa/xoá trong menu */}
                             <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100">
                               <Button
                                 type="button"
@@ -300,40 +287,7 @@ export function SessionTabs({
             </div>
           </div>
 
-          {/* Bên phải: Nút tác vụ nhanh */}
           <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
-            {activeSession && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleOpenRename(activeSession)}
-                  className="h-9 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5 rounded-xl border border-transparent hover:border-border/60"
-                  title="Đổi tên nhóm hiện tại"
-                >
-                  <Edit2 className="size-3.5" />
-                  <span className="hidden sm:inline">Đổi tên</span>
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={sessions.length <= 1}
-                  onClick={() => handleOpenDelete(activeSession)}
-                  className={cn(
-                    "h-9 px-2.5 text-xs gap-1.5 rounded-xl border border-transparent",
-                    sessions.length <= 1
-                      ? "opacity-40 cursor-not-allowed text-muted-foreground"
-                      : "text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10"
-                  )}
-                  title={sessions.length <= 1 ? "Không thể xoá nhóm duy nhất" : "Xoá nhóm hiện tại"}
-                >
-                  <Trash2 className="size-3.5" />
-                  <span className="hidden sm:inline">Xoá nhóm</span>
-                </Button>
-              </>
-            )}
-
             <Button
               variant="default"
               size="sm"
@@ -344,11 +298,9 @@ export function SessionTabs({
               <span>Tạo nhóm mới</span>
             </Button>
           </div>
-
         </div>
       </div>
 
-      {/* Dialog Tạo Nhóm Mới */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-md p-5 rounded-2xl">
           <DialogHeader>
@@ -356,9 +308,7 @@ export function SessionTabs({
               <FolderOpen className="size-4 text-primary" />
               <span>Tạo nhóm chia tiền mới</span>
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              Mỗi nhóm sẽ tính toán chi phí và hoá đơn độc lập (ví dụ: Đi ăn ngày 03/10, Tiệc sinh nhật, Đi cafe...).
-            </DialogDescription>
+
           </DialogHeader>
 
           <form onSubmit={handleConfirmCreate} className="flex flex-col gap-4 py-2">
@@ -398,7 +348,6 @@ export function SessionTabs({
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Đổi Tên Nhóm */}
       <Dialog
         open={Boolean(renamingSession)}
         onOpenChange={(open) => !open && setRenamingSession(null)}
@@ -450,7 +399,6 @@ export function SessionTabs({
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Xác Nhận Xoá Nhóm */}
       <Dialog
         open={Boolean(deletingSession)}
         onOpenChange={(open) => !open && setDeletingSession(null)}

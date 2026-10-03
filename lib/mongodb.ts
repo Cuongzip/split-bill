@@ -3,10 +3,7 @@ import mongoose from "mongoose";
 
 try {
   dns.setServers(["8.8.8.8", "1.1.1.1"]);
-} catch {
-  // ignore in environments that do not support setServers
-}
-
+} catch {}
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -36,9 +33,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 
   try {
     dns.setServers(["8.8.8.8", "1.1.1.1"]);
-  } catch {
-    // ignore
-  }
+  } catch {}
 
   if (cached.conn && cached.conn.connection.readyState === 1) {
     return cached.conn;
