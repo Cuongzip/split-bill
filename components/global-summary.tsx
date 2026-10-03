@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -114,8 +113,13 @@ export function GlobalSummary({
   };
 
   return (
-    <Card className={cn("border border-border/80 shadow-md bg-card", className)}>
-      <CardHeader className="pb-3 border-b border-border/60 bg-muted/30">
+    <Card
+      className={cn(
+        "border border-border/80 shadow-md bg-card flex flex-col gap-0 py-0 max-h-[calc(100vh-6rem)]",
+        className
+      )}
+    >
+      <CardHeader className="shrink-0 p-4 pb-3 border-b border-border/60 bg-muted/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -125,9 +129,6 @@ export function GlobalSummary({
               <CardTitle className="text-base font-bold tracking-tight">
                 TỔNG KẾT
               </CardTitle>
-              <p className="text-[11px] text-muted-foreground">
-                Tổng hợp theo bill &amp; chi phí riêng
-              </p>
             </div>
           </div>
           <Badge variant="secondary" className="font-mono text-xs">
@@ -136,9 +137,9 @@ export function GlobalSummary({
         </div>
       </CardHeader>
 
-      <CardContent className="pt-3 flex flex-col gap-2">
+      <CardContent className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 pt-3 flex flex-col gap-2 custom-scrollbar">
         {globalResult.unassignedProductsCount > 0 && (
-          <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive text-xs border border-destructive/20 mb-1">
+          <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive text-xs border border-destructive/20 shrink-0">
             <AlertCircle className="size-4 shrink-0" />
             <span>
               Có {globalResult.unassignedProductsCount} món chưa gán người chia!
@@ -263,23 +264,21 @@ export function GlobalSummary({
             );
           })}
         </div>
+      </CardContent>
 
-        <Separator className="my-1.5" />
-
-        <div className="flex items-center justify-between py-1">
+      <CardFooter className="shrink-0 p-4 border-t border-border/60 bg-muted/20 flex flex-col gap-2.5">
+        <div className="flex items-center justify-between w-full">
           <span className="text-sm font-bold text-foreground">Tổng cộng</span>
           <span className="font-mono text-lg font-extrabold text-primary">
             {formatVND(globalResult.grandTotal)}
           </span>
         </div>
 
-        <div className="text-[11px] text-muted-foreground flex justify-between">
+        <div className="text-[11px] text-muted-foreground flex justify-between w-full">
           <span>{bills.length} hoá đơn</span>
           <span>{standaloneProducts.length} chi phí riêng</span>
         </div>
-      </CardContent>
 
-      <CardFooter className="pt-3 border-t border-border/60 bg-muted/20 flex flex-col gap-2">
         <Button
           type="button"
           variant="outline"

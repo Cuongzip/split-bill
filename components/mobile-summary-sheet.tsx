@@ -64,6 +64,7 @@ export function MobileSummarySheet({
                 bills={bills}
                 standaloneProducts={standaloneProducts}
                 participants={participants}
+                className="max-h-none"
               />
             </div>
           </SheetContent>
