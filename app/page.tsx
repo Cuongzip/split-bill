@@ -106,7 +106,7 @@ export default function Home() {
       });
       const json = await res.json();
       if (json.success && json.data) {
-        setSessions((prev) => [...prev, json.data]);
+        setSessions((prev) => [json.data, ...prev]);
         setActiveSessionId(json.data.id);
       }
     } catch (err) {
@@ -455,12 +455,10 @@ export default function Home() {
                 <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
                   <Receipt className="size-6" />
                 </div>
-                <h3 className="font-semibold text-sm text-foreground">
+                <h3 className="font-semibold text-sm text-foreground mb-4">
                   Chưa có hoá đơn nào trong nhóm &quot;{currentSession?.name || "này"}&quot;
                 </h3>
-                <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
-                  Bấm nút bên dưới để tải ảnh hoá đơn hoặc nhập hoá đơn mới cho nhóm này.
-                </p>
+               
                 <Button size="sm" onClick={() => setIsAddBillOpen(true)}>
                   <Plus data-icon="inline-start" />
                   Thêm bill vào nhóm

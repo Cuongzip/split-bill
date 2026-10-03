@@ -355,7 +355,7 @@ export async function resetAllData() {
 
 export async function getSessions(): Promise<Session[]> {
   await connectToDatabase();
-  const docs = await SessionModel.find({}).sort({ createdAt: 1 }).lean();
+  const docs = await SessionModel.find({}).sort({ createdAt: -1 }).lean();
   return docs.map((d) => ({
     id: d.id,
     name: d.name,

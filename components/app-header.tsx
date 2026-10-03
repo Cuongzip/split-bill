@@ -10,7 +10,6 @@ import {
   Users,
   ShoppingBag,
   RotateCcw,
-  Sparkles,
 } from "lucide-react";
 
 interface AppHeaderProps {
@@ -41,9 +40,7 @@ export function AppHeader({
                 BillSplit
               </span>
             </div>
-            <p className="text-[11px] text-muted-foreground hidden sm:block">
-              Chia tiền hoá đơn nhóm minh bạch theo từng món
-            </p>
+          
           </div>
         </div>
 
