@@ -17,8 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BillSplit — Chia tiền hoá đơn thông minh",
-  description: "Chia tiền hoá đơn nhóm minh bạch, tính toán chuẩn xác theo từng món ăn",
+  title: "Bill Split",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
