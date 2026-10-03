@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBills, createBill } from "@/lib/db-service";
+import { uploadImageToCloudinary } from "@/lib/cloudinary";
 
 export async function GET(req: NextRequest) {
   try {
@@ -31,12 +32,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    let finalImageUrl = image || "";
+    if (finalImageUrl && typeof finalImageUrl === "string" && finalImageUrl.startsWith("data:image/")) {
+      finalImageUrl = await uploadImageToCloudinary(finalImageUrl);
+    }
+
     const newBill = await createBill({
       id,
       sessionId,
       title,
       date,
-      image,
+      image: finalImageUrl,
       totalAmount,
       products: products || [],
     });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBillById, updateBill, deleteBill } from "@/lib/db-service";
+import { uploadImageToCloudinary } from "@/lib/cloudinary";
 
 interface RouteProps {
   params: Promise<{ id: string }>;
@@ -32,6 +33,10 @@ export async function PATCH(req: NextRequest, { params }: RouteProps) {
   try {
     const { id } = await params;
     const body = await req.json();
+
+    if (body.image && typeof body.image === "string" && body.image.startsWith("data:image/")) {
+      body.image = await uploadImageToCloudinary(body.image);
+    }
 
     const updated = await updateBill(id, body);
     if (!updated) {
