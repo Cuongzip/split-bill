@@ -39,6 +39,7 @@ interface SessionTabsProps {
   onCreateSession: (name: string) => Promise<void> | void;
   onRenameSession: (sessionId: string, newName: string) => Promise<void> | void;
   onDeleteSession: (sessionId: string) => Promise<void> | void;
+  onOpenAddBill?: () => void;
 }
 
 export function SessionTabs({
@@ -50,6 +51,7 @@ export function SessionTabs({
   onCreateSession,
   onRenameSession,
   onDeleteSession,
+  onOpenAddBill,
 }: SessionTabsProps) {
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -287,16 +289,28 @@ export function SessionTabs({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
             <Button
-              variant="default"
+              variant="outline"
               size="sm"
               onClick={handleOpenCreate}
-              className="h-9 px-3 text-xs gap-1.5 rounded-xl font-medium shadow-xs"
+              className="h-9 px-3 text-xs gap-1.5 rounded-xl font-medium border-border/80"
             >
               <Plus className="size-3.5" />
               <span>Tạo nhóm mới</span>
             </Button>
+
+            {onOpenAddBill && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={onOpenAddBill}
+                className="h-9 px-3 text-xs gap-1.5 rounded-xl font-medium shadow-xs"
+              >
+                <Plus className="size-3.5" />
+                <span>Thêm bill</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>

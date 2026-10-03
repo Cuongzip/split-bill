@@ -20,7 +20,7 @@ interface AddBillDialogProps {
   onOpenChange: (open: boolean) => void;
   participants: Participant[];
   onAddBill: (newBill: Bill) => void;
-  currentBillCount: number;
+  currentBillCount?: number;
   sessionId: string;
 }
 
@@ -106,7 +106,6 @@ export function AddBillDialog({
     setOcrError(null);
     setPendingFileData({ name: fileName, image: customImage });
 
-    const nextBillNumber = currentBillCount + 1;
     const allPids = participants.map((p) => p.id);
 
     setOcrStatusText("AI Gemini Vision đang trích xuất tên món và giá tiền...");
@@ -123,13 +122,13 @@ export function AddBillDialog({
         const newBill: Bill = {
           id: `bill_${Date.now()}`,
           sessionId: sessionId || "default",
-          title: `BILL #${nextBillNumber} — ${ocrResult.title || fileName}`,
+          title: ocrResult.title || fileName || "Hoá đơn",
           date: "Vừa xong",
           image: customImage,
           totalAmount: ocrResult.totalAmount || undefined,
           products: ocrResult.products.map(
             (item: { name: string; price: number }, idx: number) => ({
-              id: `b${nextBillNumber}_p${idx + 1}_${Date.now()}`,
+              id: `prod_${idx + 1}_${Date.now()}`,
               name: item.name,
               price: Number(item.price) || 0,
               participantIds: allPids,
@@ -160,11 +159,10 @@ export function AddBillDialog({
   };
 
   const handleCreateEmptyBill = () => {
-    const nextBillNumber = currentBillCount + 1;
     const fallbackBill: Bill = {
       id: `bill_${Date.now()}`,
       sessionId: sessionId || "default",
-      title: `BILL #${nextBillNumber} — ${pendingFileData?.name || "Hoá đơn"}`,
+      title: pendingFileData?.name || "Hoá đơn",
       date: "Vừa xong",
       image: pendingFileData?.image || "",
       products: [],
@@ -179,11 +177,10 @@ export function AddBillDialog({
     e.preventDefault();
     if (!manualTitle.trim()) return;
 
-    const nextBillNumber = currentBillCount + 1;
     const newBill: Bill = {
       id: `bill_${Date.now()}`,
       sessionId: sessionId || "default",
-      title: `BILL #${nextBillNumber} — ${manualTitle.trim()}`,
+      title: manualTitle.trim() || "Hoá đơn",
       date: "Vừa xong",
       image: "",
       products: [],
@@ -228,7 +225,7 @@ export function AddBillDialog({
             <Receipt className="size-4 text-primary" />
             <span>Thêm hoá đơn mới (Bill)</span>
           </DialogTitle>
-    Công thức
+    
         </DialogHeader>
 
         {isProcessingOcr ? (

@@ -61,44 +61,53 @@ export function GlobalSummary({
     }));
   };
 
-  const handleCopyParticipant = (pSummary: (typeof globalResult.participants)[0]) => {
-    let text = `👤 ${pSummary.participantName}: ${formatVND(pSummary.total)}\n`;
+  const handleCopyParticipant = (
+    pSummary: (typeof globalResult.participants)[0]
+  ) => {
+    const lines: string[] = [];
+    lines.push(`${pSummary.participantName}: ${formatVND(pSummary.total)}`);
+
     for (const b of pSummary.bills) {
-      text += `${b.billTitle}\n${b.shortFormula} = ${formatVND(b.total)}\n`;
+      const formulaStr = b.formula || b.shortFormula;
+      lines.push(`- ${b.billTitle}: ${formulaStr} = ${formatVND(b.total)}`);
     }
+
     if (pSummary.standaloneItems.length > 0) {
       for (const s of pSummary.standaloneItems) {
-        const splitTag = s.splitCount > 1 ? ` (1/${s.splitCount})` : " riêng";
-        text += `${s.productName}${splitTag}: + ${formatVND(s.share)}\n`;
+        const splitTag = s.splitCount > 1 ? ` 1/${s.splitCount}` : " riêng";
+        lines.push(`- ${s.productName}${splitTag}: + ${formatVND(s.share)}`);
       }
     }
-    text += `───────────────────\nTổng = ${formatVND(pSummary.total)}`;
 
+    if (pSummary.bills.length + pSummary.standaloneItems.length > 1) {
+      lines.push(`Tổng cộng: ${formatVND(pSummary.total)}`);
+    }
+
+    const text = lines.join("\n");
     navigator.clipboard.writeText(text);
     setCopiedPid(pSummary.participantId);
     setTimeout(() => setCopiedPid(null), 2000);
   };
 
   const handleCopyAll = () => {
-    let text = `🧾 TỔNG KẾT CHIA TIỀN — BILLSPLIT\n`;
-    text += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    const lines: string[] = ["TỔNG KẾT CHIA TIỀN", ""];
 
     for (const p of globalResult.participants) {
-      text += `👤 ${p.participantName}: ${formatVND(p.total)}\n`;
+      lines.push(`${p.participantName}: ${formatVND(p.total)}`);
       for (const b of p.bills) {
-        text += `   ${b.billTitle}: ${b.shortFormula} = ${formatVND(b.total)}\n`;
+        const formulaStr = b.formula || b.shortFormula;
+        lines.push(`  ${b.billTitle}: ${formulaStr} = ${formatVND(b.total)}`);
       }
       for (const s of p.standaloneItems) {
-        const splitTag = s.splitCount > 1 ? ` (1/${s.splitCount})` : " riêng";
-        text += `   ${s.productName}${splitTag}: + ${formatVND(s.share)}\n`;
+        const splitTag = s.splitCount > 1 ? ` 1/${s.splitCount}` : " riêng";
+        lines.push(`  ${s.productName}${splitTag}: + ${formatVND(s.share)}`);
       }
-      text += `   ───────────────────\n   Tổng = ${formatVND(p.total)}\n\n`;
+      lines.push("");
     }
 
-    text += `━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `💰 TỔNG CỘNG: ${formatVND(globalResult.grandTotal)}\n`;
-    text += `Tạo tự động bởi BillSplit`;
+    lines.push(`Tổng cộng: ${formatVND(globalResult.grandTotal)}`);
 
+    const text = lines.join("\n");
     navigator.clipboard.writeText(text);
     setIsAllCopied(true);
     setTimeout(() => setIsAllCopied(false), 2000);
@@ -278,17 +287,7 @@ export function GlobalSummary({
           className="w-full text-xs"
           onClick={handleCopyAll}
         >
-          {isAllCopied ? (
-            <>
-              <Check data-icon="inline-start" className="text-emerald-500" />
-              Đã sao chép vào bộ nhớ tạm!
-            </>
-          ) : (
-            <>
-              <Copy data-icon="inline-start" />
-              Sao chép toàn bộ bảng tính gửi nhóm
-            </>
-          )}
+          {isAllCopied ? "Đã sao chép vào bộ nhớ tạm!" : "Sao chép toàn bộ bảng tính"}
         </Button>
       </CardFooter>
     </Card>

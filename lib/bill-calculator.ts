@@ -439,3 +439,29 @@ export function calculateGlobal(
     participants: Object.values(summaryMap),
   };
 }
+
+export function getCleanBillTitle(title?: string): string {
+  const raw = (title || "").trim();
+  return raw
+    .replace(/^bill\s*#?\d*\s*[-—–:]\s*/i, "")
+    .replace(/^bill\s*#?\d*$/i, "")
+    .trim();
+}
+
+export function getBillDisplayTitle(
+  bill: { title?: string },
+  index?: number
+): string {
+  const clean = getCleanBillTitle(bill.title);
+  if (typeof index === "number" && index > 0) {
+    if (
+      !clean ||
+      clean.toLowerCase() === "hoá đơn" ||
+      clean.toLowerCase() === "hoa don"
+    ) {
+      return `BILL #${index}`;
+    }
+    return `BILL #${index} — ${clean}`;
+  }
+  return clean || bill.title || "Hoá đơn";
+}

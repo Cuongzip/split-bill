@@ -29,17 +29,32 @@ export function ParticipantAssignment({
   className,
 }: ParticipantAssignmentProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [side, setSide] = React.useState<"right" | "bottom">("right");
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const selectedCount = selectedIds.length;
   const perPersonShare =
     selectedCount > 0 ? Math.round(productPrice / selectedCount) : 0;
 
+  const updatePosition = React.useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceOnRight = window.innerWidth - rect.right;
+      if (spaceOnRight < 280) {
+        setSide("bottom");
+      } else {
+        setSide("right");
+      }
+    }
+  }, []);
+
   const handleMouseEnter = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
+    updatePosition();
     setIsOpen(true);
   };
 
@@ -49,16 +64,19 @@ export function ParticipantAssignment({
     }
     timeoutRef.current = setTimeout(() => {
       setIsOpen(false);
-    }, 200);
+    }, 250);
   };
 
   React.useEffect(() => {
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
     return () => {
+      window.removeEventListener("resize", updatePosition);
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, []);
+  }, [updatePosition]);
 
   const handleToggle = (pId: string) => {
     if (selectedIds.includes(pId)) {
@@ -82,13 +100,20 @@ export function ParticipantAssignment({
 
   return (
     <div
-      className={cn("relative inline-flex items-center", className)}
+      ref={containerRef}
+      className={cn("relative inline-flex items-center shrink-0", className)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onPointerEnter={handleMouseEnter}
       onPointerLeave={handleMouseLeave}
     >
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Popover
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (open) updatePosition();
+          setIsOpen(open);
+        }}
+      >
         <PopoverTrigger
           openOnHover
           delay={0}
@@ -100,9 +125,12 @@ export function ParticipantAssignment({
               onMouseLeave={handleMouseLeave}
               onPointerEnter={handleMouseEnter}
               onPointerLeave={handleMouseLeave}
-              onClick={() => setIsOpen((prev) => !prev)}
+              onClick={() => {
+                updatePosition();
+                setIsOpen((prev) => !prev);
+              }}
               className={cn(
-                "group flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-all outline-none",
+                "group flex items-center gap-1.5 rounded-md px-2 h-7 text-xs transition-all outline-none",
                 "hover:bg-muted/80 focus-visible:ring-2 focus-visible:ring-ring cursor-pointer",
                 selectedCount === 0
                   ? "bg-destructive/10 text-destructive border border-destructive/30"
@@ -114,22 +142,23 @@ export function ParticipantAssignment({
           {selectedCount === 0 ? (
             <span className="flex items-center gap-1 font-medium">
               <AlertCircle className="size-3.5" />
-              <span>Chưa chọn người chia</span>
+              <span className="hidden sm:inline">Chưa chọn người chia</span>
+              <span className="sm:hidden">Chưa chọn</span>
             </span>
           ) : selectedCount === participants.length ? (
             <span className="flex items-center gap-1 font-medium">
               <Users className="size-3.5 text-muted-foreground" />
               <span>Tất cả ({selectedCount})</span>
-              <span className="text-muted-foreground font-normal">
+              <span className="text-muted-foreground font-normal hidden sm:inline">
                 · {formatVND(perPersonShare)}/người
               </span>
             </span>
           ) : (
-            <span className="flex items-center gap-1.5 font-medium max-w-[240px] truncate">
+            <span className="flex items-center gap-1.5 font-medium max-w-[120px] sm:max-w-[240px] truncate">
               <span className="truncate">
                 {selectedParticipants.map((p) => p.name).join(" · ")}
               </span>
-              <span className="text-muted-foreground font-normal shrink-0">
+              <span className="text-muted-foreground font-normal shrink-0 hidden sm:inline">
                 ({formatVND(perPersonShare)})
               </span>
             </span>
@@ -137,8 +166,14 @@ export function ParticipantAssignment({
         </PopoverTrigger>
 
         <PopoverContent
-          align="end"
-          sideOffset={6}
+          side={side}
+          align={side === "right" ? "start" : "end"}
+          sideOffset={side === "right" ? 8 : 6}
+          collisionAvoidance={{
+            side: "flip",
+            align: "shift",
+            fallbackAxisSide: "end",
+          }}
           className="w-64 p-3 shadow-lg border-border"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}

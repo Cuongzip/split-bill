@@ -174,10 +174,13 @@ export function StandaloneProducts({
               return (
                 <div
                   key={item.id}
-                  className="group py-2.5 flex items-center justify-between gap-3 text-xs hover:bg-muted/30 px-1.5 rounded transition-colors"
+                  className="group py-1.5 flex items-center justify-between gap-2 text-xs hover:bg-muted/30 px-1.5 rounded transition-colors min-h-[36px]"
                 >
-                  <div className="flex items-baseline gap-2 min-w-0 flex-1">
-                    <span className="font-medium text-foreground truncate">
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                    <span
+                      className="font-medium text-foreground truncate"
+                      title={item.name}
+                    >
                       {item.name}
                     </span>
                     {item.note && (

@@ -7,10 +7,11 @@ import {
   Participant,
   calculateBill,
   formatVND,
+  getCleanBillTitle,
+  getBillDisplayTitle,
 } from "@/lib/bill-calculator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ParticipantAssignment } from "@/components/participant-assignment";
@@ -22,15 +23,14 @@ import {
   Edit2,
   Check,
   X,
-  Calculator,
   ZoomIn,
   AlertTriangle,
-  Copy,
 } from "lucide-react";
 import { cn } from "cn";
 
 interface BillCardProps {
   bill: Bill;
+  index?: number;
   participants: Participant[];
   onUpdateBill: (updatedBill: Bill) => void;
   onDeleteBill: (billId: string) => void;
@@ -38,6 +38,7 @@ interface BillCardProps {
 
 export function BillCard({
   bill,
+  index,
   participants,
   onUpdateBill,
   onDeleteBill,
@@ -53,6 +54,25 @@ export function BillCard({
   const [isAddingProduct, setIsAddingProduct] = React.useState(false);
   const [newProductName, setNewProductName] = React.useState("");
   const [newProductPrice, setNewProductPrice] = React.useState("");
+
+  const [isEditingTitle, setIsEditingTitle] = React.useState(false);
+  const [tempTitle, setTempTitle] = React.useState("");
+
+  const displayTitle = getBillDisplayTitle(bill, index);
+
+  const startEditingTitle = () => {
+    setTempTitle(getCleanBillTitle(bill.title));
+    setIsEditingTitle(true);
+  };
+
+  const saveTitleEdit = () => {
+    const trimmed = tempTitle.trim();
+    onUpdateBill({
+      ...bill,
+      title: trimmed || "Hoá đơn",
+    });
+    setIsEditingTitle(false);
+  };
 
   const billCalc = calculateBill(bill, participants);
   const [isEditingTotal, setIsEditingTotal] = React.useState(false);
@@ -134,9 +154,11 @@ export function BillCard({
 
   const handleCopyFormulas = () => {
     if (!billCalc.formulaBreakdown) return;
-    const text =
-      `CÁCH TÍNH - ${bill.title}\n` +
-      billCalc.formulaBreakdown.fullFormulaText;
+    const lines = billCalc.formulaBreakdown.formulas.map((f) => {
+      return `${f.participantName}: ${f.formula} = ${f.formattedTotal}`;
+    });
+
+    const text = `${displayTitle}\n${lines.join("\n")}`;
     navigator.clipboard.writeText(text);
     setIsFormulaCopied(true);
     setTimeout(() => setIsFormulaCopied(false), 2000);
@@ -150,9 +172,55 @@ export function BillCard({
             <Receipt className="size-4" />
           </div>
           <div>
-            <CardTitle className="text-base font-semibold tracking-tight">
-              {bill.title}
-            </CardTitle>
+            {isEditingTitle ? (
+              <div className="flex items-center gap-1.5 py-0.5">
+                <Input
+                  value={tempTitle}
+                  onChange={(e) => setTempTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveTitleEdit();
+                    if (e.key === "Escape") setIsEditingTitle(false);
+                  }}
+                  placeholder="Tên hoá đơn..."
+                  className="h-7 text-xs w-48 font-semibold"
+                  autoFocus
+                />
+                <Button
+                  size="icon-xs"
+                  variant="default"
+                  onClick={saveTitleEdit}
+                  title="Lưu tên hoá đơn"
+                >
+                  <Check className="size-3" />
+                </Button>
+                <Button
+                  size="icon-xs"
+                  variant="ghost"
+                  onClick={() => setIsEditingTitle(false)}
+                  title="Hủy"
+                >
+                  <X className="size-3" />
+                </Button>
+              </div>
+            ) : (
+              <div className="group/title flex items-center gap-1.5">
+                <CardTitle
+                  onClick={startEditingTitle}
+                  className="text-base font-semibold tracking-tight cursor-pointer hover:text-primary transition-colors"
+                  title="Bấm để sửa tên hoá đơn"
+                >
+                  {displayTitle}
+                </CardTitle>
+                <button
+                  type="button"
+                  onClick={startEditingTitle}
+                  className="p-1 text-muted-foreground hover:text-foreground opacity-0 group-hover/title:opacity-100 transition-opacity rounded cursor-pointer"
+                  title="Sửa tên hoá đơn"
+                >
+                  <Edit2 className="size-3" />
+                </button>
+              </div>
+            )}
             {bill.date && (
               <span className="text-xs text-muted-foreground">{bill.date}</span>
             )}
@@ -160,13 +228,17 @@ export function BillCard({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="text-right">
+          <div className="flex flex-col items-end">
             {isEditingTotal ? (
               <div className="flex items-center gap-1">
                 <Input
                   type="number"
                   value={tempTotal}
                   onChange={(e) => setTempTotal(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveTotalEdit();
+                    if (e.key === "Escape") setIsEditingTotal(false);
+                  }}
                   className="h-7 text-xs w-28 text-right font-bold"
                   autoFocus
                 />
@@ -179,22 +251,22 @@ export function BillCard({
               </div>
             ) : (
               <div
-                className="group flex items-center justify-end gap-1.5 cursor-pointer"
+                className="group/total flex items-center gap-1.5 cursor-pointer"
                 onClick={() => {
                   setTempTotal(String(billCalc.billTotal));
                   setIsEditingTotal(true);
                 }}
                 title="Bấm để sửa tổng tiền thanh toán"
               >
-                <div className="text-base font-bold text-foreground hover:text-primary transition-colors">
+                <Edit2 className="size-3 text-muted-foreground opacity-0 group-hover/total:opacity-100 transition-opacity" />
+                <span className="text-base font-bold text-foreground group-hover/total:text-primary transition-colors">
                   {formatVND(billCalc.billTotal)}
-                </div>
-                <Edit2 className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </span>
               </div>
             )}
-            <div className="text-[11px] text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground">
               {bill.products.length} món
-            </div>
+            </span>
           </div>
           <Button
             variant="ghost"
@@ -314,10 +386,13 @@ export function BillCard({
                   return (
                     <div
                       key={product.id}
-                      className="group py-2 flex items-center justify-between gap-3 text-xs hover:bg-muted/30 px-1.5 rounded transition-colors"
+                      className="group py-1.5 flex items-center justify-between gap-2 text-xs hover:bg-muted/30 px-1.5 rounded transition-colors min-h-[36px]"
                     >
-                      <div className="flex items-baseline gap-2 min-w-0 flex-1">
-                        <span className="font-medium text-foreground truncate">
+                      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                        <span
+                          className="font-medium text-foreground truncate"
+                          title={product.name}
+                        >
                           {product.name}
                         </span>
                         <span
@@ -419,11 +494,9 @@ export function BillCard({
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 text-xs font-bold tracking-tight text-foreground uppercase">
-                <Calculator className="size-3.5 text-primary" />
-                 Cách tính - {bill.title}
+              <span className="text-xs font-bold tracking-tight text-foreground uppercase">
+                Cách tính - {displayTitle}
               </span>
-        
             </div>
 
             <div className="flex items-center gap-2">
@@ -436,17 +509,7 @@ export function BillCard({
                   onClick={handleCopyFormulas}
                   title="Sao chép công thức tính"
                 >
-                  {isFormulaCopied ? (
-                    <>
-                      <Check className="size-3 text-emerald-500 mr-1" />
-                      Đã sao chép!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="size-3 mr-1" />
-                      Copy công thức
-                    </>
-                  )}
+                  {isFormulaCopied ? "Đã sao chép!" : "Copy công thức"}
                 </Button>
               )}
             </div>
@@ -490,7 +553,7 @@ export function BillCard({
         isOpen={isReceiptOpen}
         onOpenChange={setIsReceiptOpen}
         imageUrl={bill.image}
-        title={bill.title}
+        title={displayTitle}
       />
     </Card>
   );

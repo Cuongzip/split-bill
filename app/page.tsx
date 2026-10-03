@@ -6,6 +6,8 @@ import {
   Bill,
   StandaloneProduct,
   Session,
+  getBillDisplayTitle,
+  getCleanBillTitle,
 } from "@/lib/bill-calculator";
 import { AppHeader } from "@/components/app-header";
 import { BillCard } from "@/components/bill-card";
@@ -159,8 +161,10 @@ export default function Home() {
   };
 
   const handleAddBill = async (newBill: Bill) => {
+    const cleanTitle = getCleanBillTitle(newBill.title);
     const billWithSession = {
       ...newBill,
+      title: cleanTitle || "Hoá đơn",
       sessionId: newBill.sessionId || activeSessionId || "default",
     };
     setBills((prev) => [billWithSession, ...prev]);
@@ -176,15 +180,20 @@ export default function Home() {
   };
 
   const handleUpdateBill = async (updatedBill: Bill) => {
+    const cleanTitle = getCleanBillTitle(updatedBill.title);
     setBills((prev) =>
-      prev.map((b) => (b.id === updatedBill.id ? updatedBill : b))
+      prev.map((b) =>
+        b.id === updatedBill.id
+          ? { ...b, ...updatedBill, title: cleanTitle || "Hoá đơn" }
+          : b
+      )
     );
     try {
       await fetch(`/api/bills/${updatedBill.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: updatedBill.title,
+          title: cleanTitle || "Hoá đơn",
           date: updatedBill.date,
           image: updatedBill.image,
           totalAmount: updatedBill.totalAmount,
@@ -404,9 +413,14 @@ export default function Home() {
     }
   };
 
-  const activeBills = bills.filter(
+  const currentSessionBills = bills.filter(
     (b) => (b.sessionId || "default") === (activeSessionId || "default")
   );
+  const totalSessionBills = currentSessionBills.length;
+  const activeBills = currentSessionBills.map((b, index) => ({
+    ...b,
+    title: getBillDisplayTitle(b, totalSessionBills - index),
+  }));
   const activeStandaloneProducts = standaloneProducts.filter(
     (s) => (s.sessionId || "default") === (activeSessionId || "default")
   );
@@ -427,10 +441,7 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-background text-foreground antialiased pb-20 lg:pb-12">
       <AppHeader
         participants={participants}
-        onOpenAddBill={() => setIsAddBillOpen(true)}
-        onOpenAddStandalone={() => setIsAddStandaloneOpen(true)}
         onOpenParticipants={() => setIsParticipantsOpen(true)}
-        onResetSampleData={handleResetData}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
@@ -444,6 +455,7 @@ export default function Home() {
             onCreateSession={handleCreateSession}
             onRenameSession={handleRenameSession}
             onDeleteSession={handleDeleteSession}
+            onOpenAddBill={() => setIsAddBillOpen(true)}
           />
         )}
 
@@ -458,10 +470,11 @@ export default function Home() {
               </div>
             ) : (
               <div className="flex flex-col gap-6">
-                {activeBills.map((bill) => (
+                {activeBills.map((bill, index) => (
                   <BillCard
                     key={bill.id}
                     bill={bill}
+                    index={totalSessionBills - index}
                     participants={participants}
                     onUpdateBill={handleUpdateBill}
                     onDeleteBill={handleDeleteBill}

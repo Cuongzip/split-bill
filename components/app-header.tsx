@@ -4,28 +4,16 @@ import * as React from "react";
 import { Participant } from "@/lib/bill-calculator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Receipt,
-  Plus,
-  Users,
-  ShoppingBag,
-  RotateCcw,
-} from "lucide-react";
+import { Receipt, Users } from "lucide-react";
 
 interface AppHeaderProps {
   participants: Participant[];
-  onOpenAddBill: () => void;
-  onOpenAddStandalone: () => void;
   onOpenParticipants: () => void;
-  onResetSampleData: () => void;
 }
 
 export function AppHeader({
   participants,
-  onOpenAddBill,
-  onOpenAddStandalone,
   onOpenParticipants,
-  onResetSampleData,
 }: AppHeaderProps) {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/80 bg-background/95 backdrop-blur-md">
@@ -40,7 +28,6 @@ export function AppHeader({
                 BillSplit
               </span>
             </div>
-          
           </div>
         </div>
 
@@ -57,37 +44,6 @@ export function AppHeader({
             <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0 h-4">
               {participants.length}
             </Badge>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onResetSampleData}
-            title="Làm mới / Xoá tất cả dữ liệu"
-            className="text-muted-foreground hover:text-foreground hidden md:inline-flex"
-          >
-            <RotateCcw className="size-3.5" />
-            <span className="sr-only">Làm mới dữ liệu</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onOpenAddStandalone}
-            className="text-xs hidden sm:inline-flex"
-          >
-            <ShoppingBag data-icon="inline-start" />
-            Thêm sản phẩm
-          </Button>
-
-          <Button
-            variant="default"
-            size="sm"
-            onClick={onOpenAddBill}
-            className="text-xs shadow-xs"
-          >
-            <Plus data-icon="inline-start" />
-            Thêm bill
           </Button>
         </div>
       </div>
